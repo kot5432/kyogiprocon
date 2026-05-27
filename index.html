@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>37th Procon - Hexa-Udon Visualizer</title>
+  </head>
+  <body>
+    <div id="app">
+      <aside id="sidebar">
+        <h2>Hexa-Udon Visualizer</h2>
+        
+        <div class="panel">
+          <h3>Load Data</h3>
+          <div class="input-group">
+            <label for="map-file">Map Info JSON</label>
+            <input type="file" id="map-file" accept=".json" />
+          </div>
+          <div class="input-group">
+            <label for="action-file">Action Plan JSON (Optional)</label>
+            <input type="file" id="action-file" accept=".json" />
+          </div>
+        </div>
+
+        <div class="panel controls">
+          <h3>Playback</h3>
+          
+          <div class="control-row">
+            <button id="btn-play">▶ Play</button>
+            <button id="btn-pause" disabled>⏸ Pause</button>
+            <button id="btn-step-prev">⏮ Prev</button>
+            <button id="btn-step-next">⏭ Next</button>
+          </div>
+          
+          <div class="input-group range-group">
+            <label for="step-slider">Step: <span id="step-label">0</span></label>
+            <input type="range" id="step-slider" min="0" max="0" value="0" disabled />
+          </div>
+
+          <div class="input-group range-group">
+            <label for="speed-slider">Speed</label>
+            <input type="range" id="speed-slider" min="1" max="100" value="50" />
+          </div>
+        </div>
+      </aside>
+      
+      <main id="main">
+        <div id="canvas-container">
+          <canvas id="viz-canvas"></canvas>
+        </div>
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
