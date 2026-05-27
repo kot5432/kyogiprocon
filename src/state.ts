@@ -1,4 +1,4 @@
-import { VisualizerData } from './types';
+import type { VisualizerData } from './types';
 
 export class StateManager {
     data: VisualizerData;

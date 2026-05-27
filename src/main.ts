@@ -1,5 +1,5 @@
 import './style.css'
-import { VisualizerData } from './types'
+import type { VisualizerData } from './types'
 import { StateManager } from './state'
 import { drawHexGrid } from './draw'
 

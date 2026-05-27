@@ -9,7 +9,7 @@ const COLORS = [
 
 const SPOT_COLORS = ['#fbbf24', '#f43f5e']; // Brand 0 and 1
 
-export function drawHexGrid(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: StateManager, step: number) {
+export function drawHexGrid(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: StateManager, _step: number) {
     if (!state.data.mapData) return;
 
     const { width: mapW, height: mapH, cells } = state.data.mapData.map;
