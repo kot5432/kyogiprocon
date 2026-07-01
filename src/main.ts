@@ -1,6 +1,6 @@
 import './style.css'
 import { StateManager } from './state'
-import { drawHexGrid } from './draw'
+import { drawHexGrid, toggleCellIds } from './draw'
 import type { VisualizerData } from './types'
 
 // UI Elements
@@ -681,6 +681,18 @@ stepSlider.addEventListener('input', (e) => {
   currentStep = parseInt((e.target as HTMLInputElement).value);
   stepLabel.innerText = currentStep.toString();
   draw();
+});
+
+// セルID表示トグル
+const btnToggleCellIds = document.getElementById('btn-toggle-cell-ids') as HTMLButtonElement | null;
+btnToggleCellIds?.addEventListener('click', () => {
+  toggleCellIds();
+  draw();
+  if (btnToggleCellIds) {
+    btnToggleCellIds.textContent = btnToggleCellIds.textContent?.includes('OFF')
+      ? '🔢 Cell IDs: ON'
+      : '🔢 Cell IDs: OFF';
+  }
 });
 
 init();
