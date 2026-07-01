@@ -356,3 +356,46 @@ canvas {
 .config-buttons button {
   flex: 1;
 }
+
+/* ---- Server Panel ---- */
+.server-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.server-buttons button {
+  font-size: 0.72rem;
+  padding: 0.3rem 0.4rem;
+}
+
+#server-panel input[type="text"],
+#server-panel input[type="number"] {
+  width: 100%;
+  box-sizing: border-box;
+  background: #0f172a;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  padding: 0.3rem 0.5rem;
+  font-size: 0.8rem;
+  margin-top: 0.2rem;
+}
+
+.server-log {
+  margin-top: 0.5rem;
+  max-height: 100px;
+  overflow-y: auto;
+  background: #0f172a;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.68rem;
+  font-family: monospace;
+}
+
+.server-log-entry { color: #94a3b8; line-height: 1.5; }
+.server-log-entry.send  { color: #60a5fa; }
+.server-log-entry.recv  { color: #34d399; }
+.server-log-entry.error { color: #f87171; }

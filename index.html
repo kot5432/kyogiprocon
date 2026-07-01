@@ -11,6 +11,25 @@
       <aside id="sidebar">
         <h2>🍜 Hexa-Udon AI Visualizer</h2>
         
+        <div class="panel" id="server-panel">
+          <h3>🌐 Server Connection</h3>
+          <div class="input-group">
+            <label for="server-url">Server URL</label>
+            <input type="text" id="server-url" value="http://localhost:8080" placeholder="http://192.168.x.x:8080" />
+          </div>
+          <div class="input-group">
+            <label for="team-id">Team ID</label>
+            <input type="number" id="team-id" value="0" min="0" />
+          </div>
+          <div class="server-buttons">
+            <button id="btn-ping">🔌 Ping</button>
+            <button id="btn-fetch-map">📥 Get Map</button>
+            <button id="btn-fetch-day">📅 Get Day</button>
+            <button id="btn-post-action">📤 Post Action</button>
+          </div>
+          <div id="server-log" class="server-log"></div>
+        </div>
+
         <div class="panel">
           <h3>📁 Load Data</h3>
           <div id="load-guide" class="load-guide">

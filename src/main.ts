@@ -1,6 +1,7 @@
 import './style.css'
 import { StateManager } from './state'
 import { drawHexGrid, toggleCellIds } from './draw'
+import { serverClient, setLogCallback } from './server'
 import type { VisualizerData } from './types'
 
 // UI Elements
@@ -50,6 +51,15 @@ const agentTypesStatus = document.getElementById('agent-types-status') as HTMLSp
 const dayInfoFile = document.getElementById('day-info-file') as HTMLInputElement;
 const dayInfoStatus = document.getElementById('day-info-status') as HTMLSpanElement;
 
+// Server UI elements
+const serverUrlInput  = document.getElementById('server-url')      as HTMLInputElement | null;
+const teamIdInput     = document.getElementById('team-id')         as HTMLInputElement | null;
+const btnPing         = document.getElementById('btn-ping')         as HTMLButtonElement | null;
+const btnFetchMap     = document.getElementById('btn-fetch-map')    as HTMLButtonElement | null;
+const btnFetchDay     = document.getElementById('btn-fetch-day')    as HTMLButtonElement | null;
+const btnPostAction   = document.getElementById('btn-post-action')  as HTMLButtonElement | null;
+const serverLogEl     = document.getElementById('server-log')       as HTMLDivElement | null;
+
 let patrolCount = 2;
 let supplyCount = 2;
 
@@ -68,6 +78,104 @@ let animationId = 0;
 function init() {
   resizeCanvas();
   draw();
+  setupServerUI();
+}
+
+// -------------------------------------------------------
+// サーバーUI初期化
+// -------------------------------------------------------
+function appendServerLog(type: 'send' | 'recv' | 'error', message: string) {
+  if (!serverLogEl) return;
+  const entry = document.createElement('div');
+  entry.className = `server-log-entry ${type}`;
+  const time = new Date().toLocaleTimeString('ja-JP', { hour12: false });
+  entry.textContent = `[${time}] ${message}`;
+  serverLogEl.appendChild(entry);
+  // 最大20行
+  while (serverLogEl.children.length > 20) serverLogEl.removeChild(serverLogEl.firstChild!);
+  serverLogEl.scrollTop = serverLogEl.scrollHeight;
+}
+
+function setupServerUI() {
+  // ログコールバック登録
+  setLogCallback((type, message) => appendServerLog(type, message));
+
+  // URL / TeamID 変更時に設定を反映
+  serverUrlInput?.addEventListener('change', () => {
+    serverClient.setConfig({ baseUrl: serverUrlInput.value.trim() });
+    appendServerLog('send', `URL 変更: ${serverUrlInput.value.trim()}`);
+  });
+  teamIdInput?.addEventListener('change', () => {
+    serverClient.setConfig({ teamId: parseInt(teamIdInput.value) });
+    appendServerLog('send', `Team ID 変更: ${teamIdInput.value}`);
+  });
+
+  // Ping
+  btnPing?.addEventListener('click', async () => {
+    btnPing.disabled = true;
+    appendServerLog('send', 'Ping...');
+    const r = await serverClient.ping();
+    appendServerLog(r.ok ? 'recv' : 'error', r.ok ? `Pong! (${r.elapsedMs}ms)` : (r.error ?? 'error'));
+    btnPing.disabled = false;
+  });
+
+  // Get Map
+  btnFetchMap?.addEventListener('click', async () => {
+    btnFetchMap.disabled = true;
+    const r = await serverClient.fetchMapData();
+    if (r.ok && r.data) {
+      vizData.mapData = r.data;
+      stateManager = new StateManager(vizData);
+      currentStep = 0;
+      updateControls();
+      draw();
+      mapStatus.textContent = '✓ Fetched';
+      mapStatus.className = 'status success';
+    } else {
+      appendServerLog('error', r.error ?? 'Failed to fetch map');
+    }
+    btnFetchMap.disabled = false;
+  });
+
+  // Get Day
+  btnFetchDay?.addEventListener('click', async () => {
+    if (!vizData.mapData) {
+      appendServerLog('error', 'マップを先に取得してください');
+      return;
+    }
+    btnFetchDay.disabled = true;
+    const r = await serverClient.fetchDayInfo();
+    if (r.ok && r.data) {
+      vizData.days.push({ info: r.data, actions: null });
+      stateManager = new StateManager(vizData);
+      currentStep = 0;
+      updateControls();
+      draw();
+      dayInfoStatus.textContent = `✓ Day ${r.data.day}`;
+      dayInfoStatus.className = 'status success';
+    } else {
+      appendServerLog('error', r.error ?? 'Failed to fetch day info');
+    }
+    btnFetchDay.disabled = false;
+  });
+
+  // Post Action (現在のアクションデータがあれば送信)
+  btnPostAction?.addEventListener('click', async () => {
+    if (!vizData.days.length) {
+      appendServerLog('error', 'アクションデータがありません');
+      return;
+    }
+    const lastDay = vizData.days[vizData.days.length - 1];
+    if (!lastDay.actions) {
+      appendServerLog('error', 'アクションプランをロードしてください');
+      return;
+    }
+    btnPostAction.disabled = true;
+    const r = await serverClient.postActionPlan(lastDay.actions);
+    appendServerLog(r.ok ? 'recv' : 'error',
+      r.ok ? `送信成功 (${r.elapsedMs}ms)` : (r.error ?? 'error'));
+    btnPostAction.disabled = false;
+  });
 }
 
 function resizeCanvas() {
