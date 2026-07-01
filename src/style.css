@@ -7,6 +7,11 @@
   --accent-hover: #4f46e5;
   --error: #ef4444;
   --font: system-ui, -apple-system, sans-serif;
+  --patrol-color: #3b82f6;
+  --supply-color: #22c55e;
+  --fuel-high: #22c55e;
+  --fuel-medium: #eab308;
+  --fuel-low: #ef4444;
 }
 
 body {
@@ -101,14 +106,12 @@ input[type="range"] {
   flex: 1;
   position: relative;
   display: flex;
-  justify-content: center;
-  align-items: center;
+  gap: 1rem;
   padding: 1rem;
 }
 
 #canvas-container {
-  width: 100%;
-  height: 100%;
+  flex: 1;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -117,7 +120,177 @@ input[type="range"] {
   overflow: hidden;
 }
 
+#right-panel {
+  width: 300px;
+  background-color: var(--sidebar-bg);
+  border-left: 1px solid var(--border);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow-y: auto;
+}
+
 canvas {
   max-width: 100%;
   max-height: 100%;
+}
+
+/* Fuel Gauges */
+#fuel-gauges {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.fuel-gauge {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.fuel-gauge-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.fuel-bar {
+  height: 20px;
+  background-color: #374151;
+  border-radius: 0.25rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.fuel-fill {
+  height: 100%;
+  transition: width 0.3s, background-color 0.3s;
+}
+
+.fuel-fill.high { background-color: var(--fuel-high); }
+.fuel-fill.medium { background-color: var(--fuel-medium); }
+.fuel-fill.low { background-color: var(--fuel-low); }
+.fuel-fill.critical {
+  background-color: var(--fuel-low);
+  animation: blink 0.5s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Decision Panel */
+#decision-panel {
+  font-size: 0.85rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.decision-item {
+  background-color: #374151;
+  padding: 0.75rem;
+  border-radius: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.decision-target {
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+
+.decision-reasons {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.decision-reasons li {
+  padding-left: 1rem;
+  position: relative;
+  margin-bottom: 0.25rem;
+}
+
+.decision-reasons li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+}
+
+.placeholder {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* Score Canvas */
+#score-canvas {
+  width: 100%;
+  height: 120px;
+  background-color: #1f2937;
+  border-radius: 0.25rem;
+}
+
+#score-display {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.score-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  font-weight: 600;
+}
+
+.our-score {
+  background-color: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+.opponent-score {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+/* Turn Log */
+#turn-log {
+  max-height: 300px;
+  overflow-y: auto;
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.log-entry {
+  background-color: #374151;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  border-left: 3px solid var(--accent);
+}
+
+.log-turn {
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 0.25rem;
+}
+
+.log-action {
+  color: #9ca3af;
+  margin-bottom: 0.125rem;
+}
+
+.log-event {
+  color: #fbbf24;
+}
+
+.range-group {
+  margin-top: 0.5rem;
 }

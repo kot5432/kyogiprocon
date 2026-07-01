@@ -3,27 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>37th Procon - Hexa-Udon Visualizer</title>
+    <title>37th Procon - Hexa-Udon AI Visualizer</title>
   </head>
   <body>
     <div id="app">
+      <!-- Left Sidebar: Controls & Info -->
       <aside id="sidebar">
-        <h2>Hexa-Udon Visualizer</h2>
+        <h2>🍜 Hexa-Udon AI Visualizer</h2>
         
         <div class="panel">
-          <h3>Load Data</h3>
+          <h3>📁 Load Data</h3>
           <div class="input-group">
             <label for="map-file">Map Info JSON</label>
             <input type="file" id="map-file" accept=".json" />
           </div>
           <div class="input-group">
-            <label for="action-file">Action Plan JSON (Optional)</label>
+            <label for="action-file">Action Plan JSON</label>
             <input type="file" id="action-file" accept=".json" />
           </div>
         </div>
 
         <div class="panel controls">
-          <h3>Playback</h3>
+          <h3>🎮 Playback</h3>
           
           <div class="control-row">
             <button id="btn-play">▶ Play</button>
@@ -33,7 +34,7 @@
           </div>
           
           <div class="input-group range-group">
-            <label for="step-slider">Step: <span id="step-label">0</span></label>
+            <label for="step-slider">Turn: <span id="step-label">0</span></label>
             <input type="range" id="step-slider" min="0" max="0" value="0" disabled />
           </div>
 
@@ -42,12 +43,50 @@
             <input type="range" id="speed-slider" min="1" max="100" value="50" />
           </div>
         </div>
+
+        <!-- Fuel Gauges -->
+        <div class="panel">
+          <h3>⛽ Fuel Status</h3>
+          <div id="fuel-gauges"></div>
+        </div>
+
+        <!-- Decision Reasoning -->
+        <div class="panel">
+          <h3>🧠 AI Decision</h3>
+          <div id="decision-panel">
+            <p class="placeholder">Load data to see AI reasoning</p>
+          </div>
+        </div>
       </aside>
       
+      <!-- Main Content: Map + Right Panel -->
       <main id="main">
         <div id="canvas-container">
           <canvas id="viz-canvas"></canvas>
         </div>
+        
+        <!-- Right Panel: Logs & Score -->
+        <aside id="right-panel">
+          <div class="panel">
+            <h3>📊 Score History</h3>
+            <canvas id="score-canvas"></canvas>
+            <div id="score-display">
+              <div class="score-item our-score">
+                <span>Our Score:</span>
+                <span id="our-score">0</span>
+              </div>
+              <div class="score-item opponent-score">
+                <span>Opponent:</span>
+                <span id="opponent-score">0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h3>📝 Turn Log</h3>
+            <div id="turn-log"></div>
+          </div>
+        </aside>
       </main>
     </div>
     <script type="module" src="/src/main.ts"></script>
