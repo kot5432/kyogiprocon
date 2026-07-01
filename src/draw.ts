@@ -152,7 +152,7 @@ function drawAgents(
 
     for (let agentId = 0; agentId < numAgents; agentId++) {
         const pos = state.getAgentPosition(step, agentId);
-        const agentType = state.getAgentType(agentId);
+        const agentType = state.getAgentType(agentId, step);
         const { cx, cy } = getHexCenter(pos);
 
         // Draw agent based on type
@@ -199,7 +199,7 @@ function drawFuturePaths(
     const lookAhead = 5;
 
     for (let agentId = 0; agentId < numAgents; agentId++) {
-        const agentType = state.getAgentType(agentId);
+        const agentType = state.getAgentType(agentId, step);
         const path = state.getFuturePath(agentId, step, lookAhead);
         
         if (path.length === 0) continue;
@@ -246,7 +246,7 @@ function drawTargetArrows(
     const numAgents = state.data.mapData.agents.length;
 
     for (let agentId = 0; agentId < numAgents; agentId++) {
-        const agentType = state.getAgentType(agentId);
+        const agentType = state.getAgentType(agentId, step);
         const currentPos = state.getAgentPosition(step, agentId);
         const path = state.getFuturePath(agentId, step, 5);
         

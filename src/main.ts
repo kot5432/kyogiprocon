@@ -1,7 +1,7 @@
 import './style.css'
-import type { VisualizerData } from './types'
 import { StateManager } from './state'
 import { drawHexGrid } from './draw'
+import type { VisualizerData } from './types'
 
 // UI Elements
 const mapFileInput = document.getElementById('map-file') as HTMLInputElement;
@@ -88,7 +88,7 @@ function updateFuelGauges() {
 
   for (let agentId = 0; agentId < numAgents; agentId++) {
     const fuel = stateManager.getAgentFuel(currentStep, agentId);
-    const agentType = stateManager.getAgentType(agentId);
+    const agentType = stateManager.getAgentType(agentId, currentStep);
     const percentage = (fuel / fuelLimit) * 100;
 
     const gaugeDiv = document.createElement('div');
@@ -332,6 +332,25 @@ actionFileInput.addEventListener('change', (e) => {
           updateControls();
           draw();
         }
+      } else if (data.agents !== undefined && data.day !== undefined) {
+        // Day info format (like sample_day.json)
+        // This is a single day's state, not actions
+        // We'll store it as day info
+        if (!vizData.mapData) {
+          alert("Please load map data first");
+          return;
+        }
+        
+        const dayInfo = data;
+        vizData.days.push({
+          info: dayInfo,
+          actions: null
+        });
+        
+        stateManager = new StateManager(vizData);
+        currentStep = 0;
+        updateControls();
+        draw();
       } else if (data.agentTypes !== undefined) {
         // Extended format with agent types and decisions
         vizData.agentTypes = data.agentTypes;

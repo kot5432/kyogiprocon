@@ -1,4 +1,4 @@
-import type { VisualizerData, ScoreHistory } from './types';
+import type { ScoreHistory, VisualizerData } from './types';
 
 export class StateManager {
     data: VisualizerData;
@@ -24,11 +24,17 @@ export class StateManager {
             Array(numAgents).fill(0)
         );
 
-        // Set initial positions and fuel
+        // Set initial positions and fuel from day 0 or map data
         if (this.data.days.length > 0 && this.data.days[0].info.agents) {
             this.data.days[0].info.agents.forEach((agent, i) => {
                 this.agentPositions[0][i] = agent.pos;
                 this.agentFuels[0][i] = agent.fuel;
+            });
+        } else {
+            // Fallback to map data
+            this.data.mapData.agents.forEach((pos, i) => {
+                this.agentPositions[0][i] = pos;
+                this.agentFuels[0][i] = this.data.mapData!.fuelLimits;
             });
         }
 
@@ -37,7 +43,7 @@ export class StateManager {
     }
 
     private simulateMovement() {
-        if (!this.data.mapData || !this.data.agentTypes) return;
+        if (!this.data.mapData) return;
 
         const numAgents = this.data.mapData.agents.length;
 
@@ -138,9 +144,28 @@ export class StateManager {
         return this.agentFuels[step][agentId];
     }
 
-    getAgentType(agentId: number): number {
-        if (!this.data.agentTypes) return 0;
-        return this.data.agentTypes[agentId] || 0;
+    getAgentType(agentId: number, step: number = 0): number {
+        // Try to get from day info first (actual data format)
+        const dayIndex = this.getDayIndexFromStep(step);
+        const day = this.data.days[dayIndex];
+        if (day?.info?.agents?.[agentId]) {
+            return day.info.agents[agentId].kind;
+        }
+        // Fallback to agentTypes array
+        if (this.data.agentTypes) {
+            return this.data.agentTypes[agentId] || 0;
+        }
+        return 0;
+    }
+
+    private getDayIndexFromStep(step: number): number {
+        if (!this.data.mapData) return 0;
+        let accumulated = 0;
+        for (let i = 0; i < this.data.mapData.daySteps.length; i++) {
+            accumulated += this.data.mapData.daySteps[i];
+            if (step < accumulated) return i;
+        }
+        return this.data.mapData.daySteps.length - 1;
     }
 
     getFuelLimit(): number {

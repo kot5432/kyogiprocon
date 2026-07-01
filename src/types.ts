@@ -20,7 +20,7 @@ export interface MapData {
 }
 
 export interface AgentInfo {
-    kind: number;
+    kind: number; // 0: patrol, 1: supply
     pos: number;
     fuel: number;
 }
