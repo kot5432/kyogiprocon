@@ -28,6 +28,31 @@ const ourScoreDisplay = document.getElementById('our-score') as HTMLSpanElement;
 const opponentScoreDisplay = document.getElementById('opponent-score') as HTMLSpanElement;
 const turnLogContainer = document.getElementById('turn-log') as HTMLDivElement;
 
+// Load guide elements
+const loadGuide = document.getElementById('load-guide') as HTMLDivElement;
+const mapStatus = document.getElementById('map-status') as HTMLSpanElement;
+const actionStatus = document.getElementById('action-status') as HTMLSpanElement;
+
+// Agent config elements
+const agentConfigPanel = document.getElementById('agent-config-panel') as HTMLDivElement;
+const patrolCountSlider = document.getElementById('patrol-count') as HTMLInputElement;
+const supplyCountSlider = document.getElementById('supply-count') as HTMLInputElement;
+const patrolValueDisplay = document.getElementById('patrol-value') as HTMLSpanElement;
+const supplyValueDisplay = document.getElementById('supply-value') as HTMLSpanElement;
+const totalAgentsDisplay = document.getElementById('total-agents') as HTMLSpanElement;
+const maxAgentsDisplay = document.getElementById('max-agents') as HTMLSpanElement;
+const btnApplyConfig = document.getElementById('btn-apply-config') as HTMLButtonElement;
+const btnExportConfig = document.getElementById('btn-export-config') as HTMLButtonElement;
+const agentTypesFile = document.getElementById('agent-types-file') as HTMLInputElement;
+const agentTypesStatus = document.getElementById('agent-types-status') as HTMLSpanElement;
+
+// Day info elements
+const dayInfoFile = document.getElementById('day-info-file') as HTMLInputElement;
+const dayInfoStatus = document.getElementById('day-info-status') as HTMLSpanElement;
+
+let patrolCount = 2;
+let supplyCount = 2;
+
 let vizData: VisualizerData = {
   mapData: null,
   agentTypes: null,
@@ -279,15 +304,216 @@ function parseFile(file: File, callback: (data: any) => void) {
 mapFileInput.addEventListener('change', (e) => {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (file) {
+    mapStatus.textContent = 'Loading...';
+    mapStatus.className = 'status loading';
+    
     parseFile(file, (data) => {
       if (data.startsAt !== undefined) {
         vizData.mapData = data;
+        
+        // Update max agents based on map data
+        const mapMaxAgents = data.agents.length;
+        maxAgentsDisplay.textContent = mapMaxAgents.toString();
+        patrolCountSlider.max = mapMaxAgents.toString();
+        supplyCountSlider.max = mapMaxAgents.toString();
+        
         stateManager = new StateManager(vizData);
         currentStep = 0;
         updateControls();
         draw();
+        
+        // Update load guide
+        mapStatus.textContent = '✓ Loaded';
+        mapStatus.className = 'status success';
+        const steps = loadGuide.querySelectorAll('.step');
+        steps[0].classList.remove('active');
+        steps[0].classList.add('completed');
+        steps[1].classList.add('active');
+        
+        // Show agent config panel
+        agentConfigPanel.style.display = 'flex';
       } else {
+        mapStatus.textContent = '✗ Invalid format';
+        mapStatus.className = 'status error';
         alert("This doesn't look like Map configuration JSON.");
+      }
+    });
+  }
+});
+
+// Agent configuration UI
+patrolCountSlider.addEventListener('input', (e) => {
+  patrolCount = parseInt((e.target as HTMLInputElement).value);
+  patrolValueDisplay.textContent = patrolCount.toString();
+  updateTotalAgents();
+});
+
+supplyCountSlider.addEventListener('input', (e) => {
+  supplyCount = parseInt((e.target as HTMLInputElement).value);
+  supplyValueDisplay.textContent = supplyCount.toString();
+  updateTotalAgents();
+});
+
+function updateTotalAgents() {
+  const total = patrolCount + supplyCount;
+  totalAgentsDisplay.textContent = total.toString();
+  
+  if (total > parseInt(maxAgentsDisplay.textContent)) {
+    totalAgentsDisplay.style.color = '#ef4444';
+    btnApplyConfig.disabled = true;
+  } else {
+    totalAgentsDisplay.style.color = '#e5e7eb';
+    btnApplyConfig.disabled = false;
+  }
+}
+
+btnApplyConfig.addEventListener('click', () => {
+  const total = patrolCount + supplyCount;
+  if (total === 0) {
+    alert('Please select at least one agent');
+    return;
+  }
+  
+  // Generate agent types array
+  vizData.agentTypes = [];
+  for (let i = 0; i < patrolCount; i++) {
+    vizData.agentTypes.push(0); // Patrol
+  }
+  for (let i = 0; i < supplyCount; i++) {
+    vizData.agentTypes.push(1); // Supply
+  }
+  
+  // Reinitialize state manager with new config
+  stateManager = new StateManager(vizData);
+  currentStep = 0;
+  updateControls();
+  draw();
+  
+  // Update load guide
+  const steps = loadGuide.querySelectorAll('.step');
+  steps[1].classList.remove('active');
+  steps[1].classList.add('completed');
+  steps[2].classList.add('active');
+  
+  // Hide agent config panel
+  agentConfigPanel.style.display = 'none';
+});
+
+btnExportConfig.addEventListener('click', () => {
+  const total = patrolCount + supplyCount;
+  if (total === 0) {
+    alert('Please select at least one agent');
+    return;
+  }
+  
+  const agentTypes: number[] = [];
+  for (let i = 0; i < patrolCount; i++) {
+    agentTypes.push(0);
+  }
+  for (let i = 0; i < supplyCount; i++) {
+    agentTypes.push(1);
+  }
+  
+  const json = JSON.stringify(agentTypes, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'agent_types.json';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+agentTypesFile.addEventListener('change', (e) => {
+  const file = (e.target as HTMLInputElement).files?.[0];
+  if (file) {
+    agentTypesStatus.textContent = 'Loading...';
+    agentTypesStatus.className = 'status loading';
+    
+    parseFile(file, (data) => {
+      if (Array.isArray(data) && data.every((v: number) => v === 0 || v === 1)) {
+        // Valid agent types array
+        if (data.length !== parseInt(maxAgentsDisplay.textContent)) {
+          agentTypesStatus.textContent = `✗ Length mismatch (${data.length} vs ${maxAgentsDisplay.textContent})`;
+          agentTypesStatus.className = 'status error';
+          return;
+        }
+        
+        vizData.agentTypes = data;
+        
+        // Update UI to reflect loaded config
+        const patrolCount = data.filter((v: number) => v === 0).length;
+        const supplyCount = data.filter((v: number) => v === 1).length;
+        
+        patrolCountSlider.value = patrolCount.toString();
+        supplyCountSlider.value = supplyCount.toString();
+        patrolValueDisplay.textContent = patrolCount.toString();
+        supplyValueDisplay.textContent = supplyCount.toString();
+        updateTotalAgents();
+        
+        stateManager = new StateManager(vizData);
+        currentStep = 0;
+        updateControls();
+        draw();
+        
+        agentTypesStatus.textContent = '✓ Loaded';
+        agentTypesStatus.className = 'status success';
+        
+        // Update load guide
+        const steps = loadGuide.querySelectorAll('.step');
+        steps[1].classList.remove('active');
+        steps[1].classList.add('completed');
+        steps[2].classList.add('active');
+        
+        agentConfigPanel.style.display = 'none';
+      } else {
+        agentTypesStatus.textContent = '✗ Invalid format';
+        agentTypesStatus.className = 'status error';
+        alert('Invalid agent types format. Expected array of 0s and 1s.');
+      }
+    });
+  }
+});
+
+dayInfoFile.addEventListener('change', (e) => {
+  const file = (e.target as HTMLInputElement).files?.[0];
+  if (file) {
+    dayInfoStatus.textContent = 'Loading...';
+    dayInfoStatus.className = 'status loading';
+    
+    parseFile(file, (data) => {
+      if (data.agents !== undefined && data.day !== undefined) {
+        // Day info format
+        if (!vizData.mapData) {
+          dayInfoStatus.textContent = '✗ Load map first';
+          dayInfoStatus.className = 'status error';
+          alert("Please load map data first");
+          return;
+        }
+        
+        const dayInfo = data;
+        vizData.days.push({
+          info: dayInfo,
+          actions: null
+        });
+        
+        stateManager = new StateManager(vizData);
+        currentStep = 0;
+        updateControls();
+        draw();
+        
+        dayInfoStatus.textContent = '✓ Loaded (Day Info)';
+        dayInfoStatus.className = 'status success';
+        
+        // Update load guide
+        const steps = loadGuide.querySelectorAll('.step');
+        if (steps[2]) {
+          steps[2].classList.remove('active');
+          steps[2].classList.add('completed');
+        }
+      } else {
+        dayInfoStatus.textContent = '✗ Invalid format';
+        dayInfoStatus.className = 'status error';
       }
     });
   }
@@ -296,6 +522,9 @@ mapFileInput.addEventListener('change', (e) => {
 actionFileInput.addEventListener('change', (e) => {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (file) {
+    actionStatus.textContent = 'Loading...';
+    actionStatus.className = 'status loading';
+    
     parseFile(file, (data) => {
       // Parse action plan data
       if (Array.isArray(data)) {
@@ -331,12 +560,17 @@ actionFileInput.addEventListener('change', (e) => {
           currentStep = 0;
           updateControls();
           draw();
+          
+          actionStatus.textContent = '✓ Loaded (Action Plan)';
+          actionStatus.className = 'status success';
         }
       } else if (data.agents !== undefined && data.day !== undefined) {
         // Day info format (like sample_day.json)
         // This is a single day's state, not actions
         // We'll store it as day info
         if (!vizData.mapData) {
+          actionStatus.textContent = '✗ Load map first';
+          actionStatus.className = 'status error';
           alert("Please load map data first");
           return;
         }
@@ -351,6 +585,9 @@ actionFileInput.addEventListener('change', (e) => {
         currentStep = 0;
         updateControls();
         draw();
+        
+        actionStatus.textContent = '✓ Loaded (Day Data)';
+        actionStatus.className = 'status success';
       } else if (data.agentTypes !== undefined) {
         // Extended format with agent types and decisions
         vizData.agentTypes = data.agentTypes;
@@ -366,8 +603,22 @@ actionFileInput.addEventListener('change', (e) => {
           currentStep = 0;
           updateControls();
           draw();
+          
+          actionStatus.textContent = '✓ Loaded (Extended)';
+          actionStatus.className = 'status success';
         }
+      } else {
+        actionStatus.textContent = '✗ Unknown format';
+        actionStatus.className = 'status error';
       }
+      
+      // Update load guide
+      const steps = loadGuide.querySelectorAll('.step');
+      if (steps[2]) {
+        steps[2].classList.remove('active');
+        steps[2].classList.add('completed');
+      }
+      
       console.log("Loaded action data", data);
     });
   }

@@ -294,3 +294,65 @@ canvas {
 .range-group {
   margin-top: 0.5rem;
 }
+
+/* Load Guide */
+.load-guide {
+  background-color: #374151;
+  padding: 0.75rem;
+  border-radius: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.load-guide .step {
+  margin: 0.25rem 0;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.125rem;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.load-guide .step.active {
+  background-color: var(--accent);
+  color: white;
+  font-weight: 500;
+}
+
+.load-guide .step.completed {
+  color: #22c55e;
+  text-decoration: line-through;
+}
+
+.status {
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+.status.success {
+  color: #22c55e;
+}
+
+.status.error {
+  color: #ef4444;
+}
+
+.status.loading {
+  color: #fbbf24;
+}
+
+.config-note {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin-bottom: 0.75rem;
+  font-style: italic;
+}
+
+.config-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.config-buttons button {
+  flex: 1;
+}

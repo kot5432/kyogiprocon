@@ -42,6 +42,30 @@ export class StateManager {
         this.simulateMovement();
     }
 
+    /**
+     * アクションプランの圧縮形式を1ステップ=1要素の配列に展開する
+     * 仕様: 負の値 -N はNステップ待機、0-5は移動方向（1ステップ消費）
+     * 例: [-15] → [wait,wait,...,wait] (15個)
+     *     [0, 1, -10] → [move0, move1, wait, wait, ..., wait] (12個)
+     */
+    private expandActions(compressed: number[], totalSteps: number): number[] {
+        const expanded: number[] = [];
+        for (const cmd of compressed) {
+            if (cmd <= -1) {
+                // 負の値: |cmd| ステップ待機
+                const waitSteps = Math.abs(cmd);
+                for (let i = 0; i < waitSteps; i++) expanded.push(-1);
+            } else {
+                // 0-5: 1ステップ移動
+                expanded.push(cmd);
+            }
+            if (expanded.length >= totalSteps) break;
+        }
+        // 残りは待機で埋める
+        while (expanded.length < totalSteps) expanded.push(-1);
+        return expanded;
+    }
+
     private simulateMovement() {
         if (!this.data.mapData) return;
 
@@ -56,33 +80,64 @@ export class StateManager {
             const dayStartStep = this.getDayStartStep(dayIdx);
             const daySteps = this.data.mapData.daySteps[dayIdx] || 0;
 
+            // アクションを圧縮形式からステップごとに展開
+            const expandedActions: number[][] = actions.map(agentActions =>
+                this.expandActions(agentActions, daySteps)
+            );
+
             for (let step = 0; step < daySteps; step++) {
                 const globalStep = dayStartStep + step;
                 const prevStep = globalStep - 1;
 
                 for (let agentId = 0; agentId < numAgents; agentId++) {
-                    // Copy previous state
+                    // 前ステップの状態をコピー
                     this.agentPositions[globalStep][agentId] = this.agentPositions[prevStep][agentId];
                     this.agentFuels[globalStep][agentId] = this.agentFuels[prevStep][agentId];
 
-                    // Apply action if available
-                    if (actions[agentId] && actions[agentId][step] !== undefined) {
-                        const action = actions[agentId][step];
-                        
-                        if (action >= 0 && action <= 5) {
-                            // Movement action
-                            const { col, row } = this.getPos2D(this.agentPositions[prevStep][agentId]);
-                            const newPos = this.getNeighbor(col, row, action);
-                            const newPos1D = newPos.row * this.data.mapData!.map.width + newPos.col;
-                            
-                            this.agentPositions[globalStep][agentId] = newPos1D;
-                            this.agentFuels[globalStep][agentId] = Math.max(0, this.agentFuels[prevStep][agentId] - 1);
+                    const action = expandedActions[agentId]?.[step] ?? -1;
+
+                    if (action >= 0 && action <= 5) {
+                        // 移動命令: 隣接セルに移動・燃料消費
+                        const { col, row } = this.getPos2D(this.agentPositions[prevStep][agentId]);
+                        const newPos = this.getNeighbor(col, row, action);
+                        const mapW = this.data.mapData!.map.width;
+                        const mapH = this.data.mapData!.map.height;
+
+                        // 範囲内チェック
+                        if (
+                            newPos.col >= 0 && newPos.col < mapW &&
+                            newPos.row >= 0 && newPos.row < mapH
+                        ) {
+                            const newPos1D = newPos.row * mapW + newPos.col;
+                            const cellType = this.data.mapData!.map.cells[newPos.row]?.[newPos.col] ?? 3;
+                            // 池(3)には進入不可
+                            if (cellType !== 3) {
+                                this.agentPositions[globalStep][agentId] = newPos1D;
+                                // 巡回車のみ燃料消費（補給車は燃料不要）
+                                const kind = this.getAgentKind(agentId, dayIdx);
+                                if (kind === 0) {
+                                    const fuelCost = cellType === 2 ? 2 : 1; // 山地=2, 平地/道路=1
+                                    this.agentFuels[globalStep][agentId] = Math.max(
+                                        0,
+                                        this.agentFuels[prevStep][agentId] - fuelCost
+                                    );
+                                }
+                            }
                         }
-                        // -1 is wait, no change
                     }
+                    // 待機(-1): 位置・燃料変化なし
                 }
             }
         }
+    }
+
+    /** エージェントの種別を取得（0:巡回車, 1:補給車）dayIdx優先 */
+    private getAgentKind(agentId: number, dayIdx: number): number {
+        const day = this.data.days[dayIdx];
+        if (day?.info?.agents?.[agentId] !== undefined) {
+            return day.info.agents[agentId].kind;
+        }
+        return this.data.agentTypes?.[agentId] ?? 0;
     }
 
     private getDayStartStep(dayIdx: number): number {
@@ -104,28 +159,42 @@ export class StateManager {
         };
     }
 
-    // Pointy-topped hex, assuming "odd-r" (odd rows shifted right)
-    // 0: top-left, 1: top-right, 2: right, 3: bottom-right, 4: bottom-left, 5: left
-    getNeighbor(col: number, row: number, dir: number) {
+    /**
+     * 隣接セルの座標を返す（Q47準拠）
+     * 方向: 0=左上, 1=右上, 2=右, 3=右下, 4=左下, 5=左
+     *
+     * コンテストマップは「odd-r」オフセット座標系（奇数行が右へ0.5ずれる）
+     * 偶数行と奇数行で隣接セルのdcolが変わる
+     */
+    getNeighbor(col: number, row: number, dir: number): { col: number; row: number } {
+        // 偶数行(row%2===0)は左寄り、奇数行(row%2!==0)は右寄り
         const isOdd = row % 2 !== 0;
-        const diffs = isOdd ? [
-            { c: 0, r: -1 }, // 0: TL
-            { c: 1, r: -1 }, // 1: TR
-            { c: 1, r: 0 },  // 2: R
-            { c: 1, r: 1 },  // 3: BR
-            { c: 0, r: 1 },  // 4: BL
-            { c: -1, r: 0 }  // 5: L
-        ] : [
-            { c: -1, r: -1 }, // 0: TL
-            { c: 0, r: -1 }, // 1: TR
-            { c: 1, r: 0 },  // 2: R
-            { c: 0, r: 1 },  // 3: BR
-            { c: -1, r: 1 },  // 4: BL
-            { c: -1, r: 0 }  // 5: L
-        ];
+        //
+        //   偶数行のセル配置:          奇数行のセル配置:
+        //   TL(-1,-1) TR(0,-1)          TL(0,-1) TR(1,-1)
+        //         [col,row]                   [col,row]
+        //   BL(-1,+1) BR(0,+1)          BL(0,+1) BR(1,+1)
+        //
+        const diffs = isOdd
+            ? [
+                { c: 0,  r: -1 }, // 0: 左上 (TL)
+                { c: 1,  r: -1 }, // 1: 右上 (TR)
+                { c: 1,  r:  0 }, // 2: 右   (R)
+                { c: 1,  r: +1 }, // 3: 右下 (BR)
+                { c: 0,  r: +1 }, // 4: 左下 (BL)
+                { c: -1, r:  0 }, // 5: 左   (L)
+            ]
+            : [
+                { c: -1, r: -1 }, // 0: 左上 (TL)
+                { c: 0,  r: -1 }, // 1: 右上 (TR)
+                { c: 1,  r:  0 }, // 2: 右   (R)
+                { c: 0,  r: +1 }, // 3: 右下 (BR)
+                { c: -1, r: +1 }, // 4: 左下 (BL)
+                { c: -1, r:  0 }, // 5: 左   (L)
+            ];
 
         const d = diffs[dir];
-        if (!d) return { col, row }; // invalid dir (e.g. -1 for wait)
+        if (!d) return { col, row };
         return { col: col + d.c, row: row + d.r };
     }
 

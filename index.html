@@ -13,13 +13,54 @@
         
         <div class="panel">
           <h3>📁 Load Data</h3>
+          <div id="load-guide" class="load-guide">
+            <p class="step active">Step 1: Load Map Data</p>
+            <p class="step">Step 2: Configure Agents</p>
+            <p class="step">Step 3: Load Action/Day Data</p>
+          </div>
           <div class="input-group">
             <label for="map-file">Map Info JSON</label>
             <input type="file" id="map-file" accept=".json" />
+            <span id="map-status" class="status"></span>
           </div>
+        </div>
+
+        <div class="panel" id="agent-config-panel" style="display: none;">
+          <h3>🤖 Agent Configuration</h3>
+          <p class="config-note">エージェント種別を設定してください（大会形式: JSON配列）</p>
+          <div class="input-group">
+            <label for="patrol-count">Patrol Agents (巡回車): <span id="patrol-value">2</span></label>
+            <input type="range" id="patrol-count" min="0" max="4" value="2" />
+          </div>
+          <div class="input-group">
+            <label for="supply-count">Supply Agents (補給車): <span id="supply-value">2</span></label>
+            <input type="range" id="supply-count" min="0" max="4" value="2" />
+          </div>
+          <div class="input-group">
+            <label>Total Agents: <span id="total-agents">4</span> / <span id="max-agents">4</span></label>
+          </div>
+          <div class="config-buttons">
+            <button id="btn-apply-config">Apply Configuration</button>
+            <button id="btn-export-config">Export as JSON</button>
+          </div>
+          <div class="input-group">
+            <label for="agent-types-file">Or load Agent Types JSON:</label>
+            <input type="file" id="agent-types-file" accept=".json" />
+            <span id="agent-types-status" class="status"></span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>📝 Action Data</h3>
           <div class="input-group">
             <label for="action-file">Action Plan JSON</label>
             <input type="file" id="action-file" accept=".json" />
+            <span id="action-status" class="status"></span>
+          </div>
+          <div class="input-group">
+            <label for="day-info-file">Day Info JSON (各日開始時の試合情報)</label>
+            <input type="file" id="day-info-file" accept=".json" />
+            <span id="day-info-status" class="status"></span>
           </div>
         </div>
 
