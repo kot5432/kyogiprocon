@@ -1,10 +1,12 @@
-import type { ScoreHistory, VisualizerData, TurnLog, AgentAction } from './types';
+import type { ScoreHistory, VisualizerData, TurnLog, AgentAction, UdonGain } from './types';
 
 export class StateManager {
     data: VisualizerData;
     private agentPositions: number[][] = []; // Track positions per turn
     private agentFuels: number[][] = []; // Track fuel per turn
     private turnLogs: TurnLog[] = []; // Turn logs for analysis
+    private udonGains: UdonGain[] = []; // Track udon gains for score calculation
+    private scoreHistory: ScoreHistory[] = []; // Calculated score history
 
     constructor(data: VisualizerData) {
         this.data = data;
@@ -44,6 +46,9 @@ export class StateManager {
         
         // Generate turn logs
         this.generateTurnLogs();
+        
+        // Calculate scores
+        this.calculateScores();
     }
 
     /**
@@ -282,6 +287,7 @@ export class StateManager {
         this.turnLogs = [];
 
         for (let step = 1; step <= totalSteps; step++) {
+            const dayIdx = this.getDayIndexFromStep(step);
             const log: TurnLog = {
                 turn: step,
                 agentActions: [],
@@ -333,6 +339,14 @@ export class StateManager {
                         pos: currPos,
                         description: `Agent ${agentId} gained udon at spot ${currPos}`
                     });
+                    
+                    // Track udon gain for score calculation
+                    this.udonGains.push({
+                        agentId,
+                        day: dayIdx,
+                        spotPos: currPos,
+                        turn: step
+                    });
                 }
 
                 // Check for fuel warning
@@ -366,5 +380,62 @@ export class StateManager {
         const total = this.turnLogs.length;
         const start = Math.max(0, total - count);
         return this.turnLogs.slice(start);
+    }
+    
+    /**
+     * Calculate scores based on udon gains and other factors
+     * Simplified scoring: 1 udon = 1 point
+     */
+    private calculateScores() {
+        if (!this.data.mapData) return;
+
+        const totalSteps = this.getTotalSteps();
+        let ourScore = 0;
+        let opponentScore = 0; // Simplified: opponent score not tracked without data
+        
+        // Initialize score history with step 0
+        this.scoreHistory = [{
+            turn: 0,
+            ourScore: 0,
+            opponentScore: 0
+        }];
+        
+        // Calculate score at each step based on udon gains
+        for (let step = 1; step <= totalSteps; step++) {
+            // Count udon gains at this step
+            const stepGains = this.udonGains.filter(g => g.turn === step);
+            ourScore += stepGains.length;
+            
+            this.scoreHistory.push({
+                turn: step,
+                ourScore,
+                opponentScore // Would need opponent data for accurate calculation
+            });
+        }
+    }
+    
+    /**
+     * Get calculated score history
+     */
+    getCalculatedScoreHistory(): ScoreHistory[] {
+        return this.scoreHistory;
+    }
+    
+    /**
+     * Get current calculated score
+     */
+    getCurrentCalculatedScore(step: number): { ourScore: number; opponentScore: number } {
+        const current = this.scoreHistory.find(h => h.turn === step) || this.scoreHistory[this.scoreHistory.length - 1];
+        return {
+            ourScore: current?.ourScore || 0,
+            opponentScore: current?.opponentScore || 0
+        };
+    }
+    
+    /**
+     * Get udon gains for analysis
+     */
+    getUdonGains(): UdonGain[] {
+        return this.udonGains;
     }
 }

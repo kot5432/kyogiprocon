@@ -74,6 +74,14 @@ export interface ScoreHistory {
     opponentScore: number;
 }
 
+// Udon gain tracking per agent per day
+export interface UdonGain {
+    agentId: number;
+    day: number;
+    spotPos: number;
+    turn: number;
+}
+
 // Turn log entry
 export interface TurnLog {
     turn: number;

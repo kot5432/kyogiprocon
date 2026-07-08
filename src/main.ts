@@ -338,8 +338,9 @@ function updateDecisionPanel() {
 function updateScoreGraph() {
   if (!stateManager) return;
 
-  const scoreHistory = stateManager.getScoreHistory();
-  const currentScore = stateManager.getCurrentScore(currentStep);
+  // Use calculated score history if available, otherwise use provided data
+  const scoreHistory = stateManager.getCalculatedScoreHistory();
+  const currentScore = stateManager.getCurrentCalculatedScore(currentStep);
 
   ourScoreDisplay.textContent = currentScore.ourScore.toString();
   opponentScoreDisplay.textContent = currentScore.opponentScore.toString();
@@ -889,6 +890,9 @@ stepSlider.addEventListener('input', (e) => {
 
 // セルID表示トグル
 const btnToggleCellIds = document.getElementById('btn-toggle-cell-ids') as HTMLButtonElement | null;
+const btnExportAnalysis = document.getElementById('btn-export-analysis') as HTMLButtonElement | null;
+const btnExportScreenshot = document.getElementById('btn-export-screenshot') as HTMLButtonElement | null;
+
 btnToggleCellIds?.addEventListener('click', () => {
   toggleCellIds();
   draw();
@@ -897,6 +901,43 @@ btnToggleCellIds?.addEventListener('click', () => {
       ? '🔢 Cell IDs: ON'
       : '🔢 Cell IDs: OFF';
   }
+});
+
+btnExportAnalysis?.addEventListener('click', () => {
+  if (!stateManager) {
+    alert('No data loaded');
+    return;
+  }
+  
+  const analysisData = {
+    timestamp: new Date().toISOString(),
+    currentStep: currentStep,
+    totalSteps: stateManager.getTotalSteps(),
+    mapData: stateManager.data.mapData,
+    agentTypes: stateManager.data.agentTypes,
+    days: stateManager.data.days,
+    recentLogs: stateManager.getRecentTurnLogs(20),
+    calculatedScoreHistory: stateManager.getCalculatedScoreHistory(),
+    udonGains: stateManager.getUdonGains()
+  };
+  
+  const json = JSON.stringify(analysisData, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `hexa-udon-analysis-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+btnExportScreenshot?.addEventListener('click', () => {
+  if (!canvas) return;
+  
+  const link = document.createElement('a');
+  link.download = `hexa-udon-screenshot-${Date.now()}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
 });
 
 init();
