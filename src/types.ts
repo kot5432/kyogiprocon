@@ -48,10 +48,17 @@ export type ActionPlan = number[][]; // [agentIndex][step] -- -1=wait, 0~5=move
 
 // AI decision reasoning
 export interface DecisionReason {
-    target: string; // e.g., "Spot 14" or "Supply at pos 42"
-    reasons: string[]; // List of reasoning points
-    expectedScore?: number;
-    fuelCost?: number;
+    targetPos?: number; // Target position
+    currentFuel: number;
+    expectedScore: number;
+    reason: string;
+    alternatives?: AlternativeAction[];
+}
+
+export interface AlternativeAction {
+    action: number; // -1 for wait, 0-5 for move
+    score: number;
+    reason: string;
 }
 
 // Heatmap value for each hex cell
@@ -70,8 +77,25 @@ export interface ScoreHistory {
 // Turn log entry
 export interface TurnLog {
     turn: number;
-    agentActions: { agentId: number; action: string; direction?: string }[];
-    events: { type: string; value: number; description: string }[];
+    agentActions: AgentAction[];
+    events: LogEvent[];
+}
+
+export interface AgentAction {
+    agentId: number;
+    actionType: 'move' | 'wait';
+    direction?: number; // 0-5 for move
+    targetPos?: number; // destination position for move
+    fuelConsumed: number;
+    udonGained: boolean;
+    fuelRefueled: boolean;
+}
+
+export interface LogEvent {
+    type: 'udon' | 'refuel' | 'fuel_warning' | 'spot_empty';
+    agentId?: number;
+    pos?: number;
+    description: string;
 }
 
 // Extended day info with AI analysis

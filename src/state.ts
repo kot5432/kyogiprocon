@@ -1,9 +1,10 @@
-import type { ScoreHistory, VisualizerData } from './types';
+import type { ScoreHistory, VisualizerData, TurnLog, AgentAction } from './types';
 
 export class StateManager {
     data: VisualizerData;
     private agentPositions: number[][] = []; // Track positions per turn
     private agentFuels: number[][] = []; // Track fuel per turn
+    private turnLogs: TurnLog[] = []; // Turn logs for analysis
 
     constructor(data: VisualizerData) {
         this.data = data;
@@ -40,6 +41,9 @@ export class StateManager {
 
         // Simulate movement to track positions
         this.simulateMovement();
+        
+        // Generate turn logs
+        this.generateTurnLogs();
     }
 
     /**
@@ -227,7 +231,7 @@ export class StateManager {
         return 0;
     }
 
-    private getDayIndexFromStep(step: number): number {
+    getDayIndexFromStep(step: number): number {
         if (!this.data.mapData) return 0;
         let accumulated = 0;
         for (let i = 0; i < this.data.mapData.daySteps.length; i++) {
@@ -264,5 +268,103 @@ export class StateManager {
         }
 
         return path;
+    }
+    
+    /**
+     * Generate turn logs for analysis
+     * Logs agent actions and events per turn
+     */
+    private generateTurnLogs() {
+        if (!this.data.mapData) return;
+
+        const totalSteps = this.getTotalSteps();
+        const numAgents = this.data.mapData.agents.length;
+        this.turnLogs = [];
+
+        for (let step = 1; step <= totalSteps; step++) {
+            const log: TurnLog = {
+                turn: step,
+                agentActions: [],
+                events: []
+            };
+
+            for (let agentId = 0; agentId < numAgents; agentId++) {
+                const prevPos = this.agentPositions[step - 1][agentId];
+                const currPos = this.agentPositions[step][agentId];
+                const prevFuel = this.agentFuels[step - 1][agentId];
+                const currFuel = this.agentFuels[step][agentId];
+                const kind = this.getAgentType(agentId, step);
+
+                const action: AgentAction = {
+                    agentId,
+                    actionType: prevPos === currPos ? 'wait' : 'move',
+                    fuelConsumed: prevFuel - currFuel,
+                    udonGained: false,
+                    fuelRefueled: false
+                };
+
+                if (action.actionType === 'move') {
+                    // Determine direction
+                    const { col: prevCol, row: prevRow } = this.getPos2D(prevPos);
+                    const { col: currCol, row: currRow } = this.getPos2D(currPos);
+                    action.targetPos = currPos;
+                    
+                    // Calculate direction (simplified)
+                    const dCol = currCol - prevCol;
+                    const dRow = currRow - prevRow;
+                    const isOdd = prevRow % 2 !== 0;
+                    
+                    // Map delta to direction (0-5)
+                    if (dCol === 0 && dRow === -1) action.direction = isOdd ? 0 : 1; // TL or TR
+                    else if (dCol === 1 && dRow === -1) action.direction = isOdd ? 1 : 0; // TR or TL
+                    else if (dCol === 1 && dRow === 0) action.direction = 2; // R
+                    else if (dCol === 0 && dRow === 1) action.direction = isOdd ? 4 : 3; // BL or BR
+                    else if (dCol === 1 && dRow === 1) action.direction = isOdd ? 3 : 4; // BR or BL
+                    else if (dCol === -1 && dRow === 0) action.direction = 5; // L
+                }
+
+                // Check for udon gain (simplified: if on spot and patrol car)
+                const spot = this.data.mapData.spots.find(s => s.pos === currPos);
+                if (spot && kind === 0) {
+                    action.udonGained = true;
+                    log.events.push({
+                        type: 'udon',
+                        agentId,
+                        pos: currPos,
+                        description: `Agent ${agentId} gained udon at spot ${currPos}`
+                    });
+                }
+
+                // Check for fuel warning
+                if (currFuel <= this.data.mapData.fuelLimits * 0.2 && kind === 0) {
+                    log.events.push({
+                        type: 'fuel_warning',
+                        agentId,
+                        description: `Agent ${agentId} fuel low: ${currFuel}`
+                    });
+                }
+
+                log.agentActions.push(action);
+            }
+
+            this.turnLogs.push(log);
+        }
+    }
+    
+    /**
+     * Get turn log for a specific turn
+     */
+    getTurnLog(turn: number): TurnLog | null {
+        if (turn <= 0 || turn > this.turnLogs.length) return null;
+        return this.turnLogs[turn - 1];
+    }
+    
+    /**
+     * Get recent turn logs (last N turns)
+     */
+    getRecentTurnLogs(count: number = 10): TurnLog[] {
+        const total = this.turnLogs.length;
+        const start = Math.max(0, total - count);
+        return this.turnLogs.slice(start);
     }
 }

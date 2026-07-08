@@ -261,7 +261,8 @@ function updateFuelGauges() {
 function updateDecisionPanel() {
   if (!stateManager) return;
 
-  const extendedInfo = stateManager.data.days[0]?.extendedInfo;
+  const dayIndex = stateManager.getDayIndexFromStep(currentStep);
+  const extendedInfo = stateManager.data.days[dayIndex]?.extendedInfo;
   const decisions = extendedInfo?.decisions;
 
   if (!decisions || decisions.length === 0) {
@@ -275,21 +276,61 @@ function updateDecisionPanel() {
     const itemDiv = document.createElement('div');
     itemDiv.className = 'decision-item';
 
-    const targetDiv = document.createElement('div');
-    targetDiv.className = 'decision-target';
-    targetDiv.textContent = `Agent ${index}: ${decision.target}`;
+    const agentType = stateManager!.getAgentType(index, currentStep);
+    const agentIcon = agentType === 0 ? '🔵' : '🟢';
 
-    const reasonsUl = document.createElement('ul');
-    reasonsUl.className = 'decision-reasons';
+    // Header with agent info
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'decision-header';
+    headerDiv.innerHTML = `<span>${agentIcon} Agent ${index}</span>`;
+    itemDiv.appendChild(headerDiv);
 
-    decision.reasons.forEach(reason => {
-      const li = document.createElement('li');
-      li.textContent = reason;
-      reasonsUl.appendChild(li);
-    });
+    // Target position
+    if (decision.targetPos !== undefined) {
+      const targetDiv = document.createElement('div');
+      targetDiv.className = 'decision-target';
+      targetDiv.textContent = `Target: Position ${decision.targetPos}`;
+      itemDiv.appendChild(targetDiv);
+    }
 
-    itemDiv.appendChild(targetDiv);
-    itemDiv.appendChild(reasonsUl);
+    // Current fuel
+    const fuelDiv = document.createElement('div');
+    fuelDiv.className = 'decision-fuel';
+    const fuelPercent = (decision.currentFuel / stateManager!.getFuelLimit()) * 100;
+    const fuelColor = fuelPercent > 50 ? '#22c55e' : fuelPercent > 20 ? '#eab308' : '#ef4444';
+    fuelDiv.innerHTML = `<span>Fuel: ${decision.currentFuel}/${stateManager!.getFuelLimit()}</span>`;
+    fuelDiv.style.color = fuelColor;
+    itemDiv.appendChild(fuelDiv);
+
+    // Expected score
+    const scoreDiv = document.createElement('div');
+    scoreDiv.className = 'decision-score';
+    scoreDiv.textContent = `Expected Score: ${decision.expectedScore}`;
+    itemDiv.appendChild(scoreDiv);
+
+    // Reason
+    const reasonDiv = document.createElement('div');
+    reasonDiv.className = 'decision-reason';
+    reasonDiv.textContent = decision.reason;
+    itemDiv.appendChild(reasonDiv);
+
+    // Alternatives
+    if (decision.alternatives && decision.alternatives.length > 0) {
+      const altDiv = document.createElement('div');
+      altDiv.className = 'decision-alternatives';
+      altDiv.innerHTML = '<strong>Alternatives:</strong>';
+      
+      decision.alternatives.forEach(alt => {
+        const altItem = document.createElement('div');
+        altItem.className = 'alternative-item';
+        const actionText = alt.action === -1 ? 'Wait' : `Move ${alt.action}`;
+        altItem.textContent = `${actionText}: Score ${alt.score} - ${alt.reason}`;
+        altDiv.appendChild(altItem);
+      });
+      
+      itemDiv.appendChild(altDiv);
+    }
+
     decisionPanel.appendChild(itemDiv);
   });
 }
@@ -352,22 +393,77 @@ function updateTurnLog() {
 
   turnLogContainer.innerHTML = '';
 
-  // Add recent turn entries (last 10)
-  const recentTurns = Math.max(0, currentStep - 9);
-  for (let turn = recentTurns; turn <= currentStep; turn++) {
+  // Get recent turn logs from state manager
+  const recentLogs = stateManager.getRecentTurnLogs(10);
+  
+  // Show logs in reverse order (newest first)
+  for (let i = recentLogs.length - 1; i >= 0; i--) {
+    const log = recentLogs[i];
     const entryDiv = document.createElement('div');
     entryDiv.className = 'log-entry';
 
     const turnDiv = document.createElement('div');
     turnDiv.className = 'log-turn';
-    turnDiv.textContent = `Turn ${turn}`;
+    turnDiv.textContent = `Turn ${log.turn}`;
 
-    const actionDiv = document.createElement('div');
-    actionDiv.className = 'log-action';
-    actionDiv.textContent = 'Actions logged...';
+    // Add agent actions
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'log-actions';
+    
+    log.agentActions.forEach(action => {
+      const actionSpan = document.createElement('span');
+      actionSpan.className = `action-${action.actionType}`;
+      const agentType = stateManager!.getAgentType(action.agentId, log.turn);
+      const agentIcon = agentType === 0 ? '🔵' : '🟢';
+      
+      if (action.actionType === 'move') {
+        const dirNames = ['TL', 'TR', 'R', 'BR', 'BL', 'L'];
+        const dirName = action.direction !== undefined ? dirNames[action.direction] : '?';
+        actionSpan.textContent = `${agentIcon}A${action.agentId}: →${dirName} (${action.fuelConsumed} fuel)`;
+      } else {
+        actionSpan.textContent = `${agentIcon}A${action.agentId}: wait`;
+      }
+      
+      if (action.udonGained) {
+        actionSpan.textContent += ' 🍜';
+        actionSpan.classList.add('udon-gained');
+      }
+      
+      actionsDiv.appendChild(actionSpan);
+    });
+
+    // Add events
+    if (log.events.length > 0) {
+      const eventsDiv = document.createElement('div');
+      eventsDiv.className = 'log-events';
+      
+      log.events.forEach(event => {
+        const eventSpan = document.createElement('span');
+        eventSpan.className = `event-${event.type}`;
+        
+        switch (event.type) {
+          case 'udon':
+            eventSpan.textContent = `🍜 Udon gained at ${event.pos}`;
+            break;
+          case 'fuel_warning':
+            eventSpan.textContent = `⚠️ ${event.description}`;
+            break;
+          case 'refuel':
+            eventSpan.textContent = `⛽ Refuel at ${event.pos}`;
+            break;
+          case 'spot_empty':
+            eventSpan.textContent = `📭 Spot ${event.pos} empty`;
+            break;
+        }
+        
+        eventsDiv.appendChild(eventSpan);
+      });
+      
+      entryDiv.appendChild(eventsDiv);
+    }
 
     entryDiv.appendChild(turnDiv);
-    entryDiv.appendChild(actionDiv);
+    entryDiv.appendChild(actionsDiv);
     turnLogContainer.appendChild(entryDiv);
   }
 

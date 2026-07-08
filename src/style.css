@@ -196,33 +196,61 @@ canvas {
   margin-bottom: 0.5rem;
 }
 
-.decision-target {
+.decision-header {
   font-weight: 600;
   color: var(--accent);
   margin-bottom: 0.5rem;
+  font-size: 0.95rem;
 }
 
-.decision-reasons {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.decision-target {
+  color: #60a5fa;
+  margin-bottom: 0.25rem;
+  font-size: 0.85rem;
 }
 
-.decision-reasons li {
-  padding-left: 1rem;
-  position: relative;
+.decision-fuel {
+  margin-bottom: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.decision-score {
+  color: #fbbf24;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.decision-reason {
+  color: #d1d5db;
+  margin-bottom: 0.5rem;
+  font-style: italic;
+  font-size: 0.85rem;
+}
+
+.decision-alternatives {
+  background-color: #4b5563;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.8rem;
+}
+
+.decision-alternatives strong {
+  color: #9ca3af;
+  display: block;
   margin-bottom: 0.25rem;
 }
 
-.decision-reasons li::before {
-  content: "•";
-  position: absolute;
-  left: 0;
-  color: var(--accent);
+.alternative-item {
+  padding-left: 0.5rem;
+  margin-bottom: 0.25rem;
+  color: #d1d5db;
 }
 
 .placeholder {
-  color: #9ca3af;
+  color: #6b7280;
+  text-align: center;
+  padding: 1rem;
   font-style: italic;
 }
 
@@ -282,13 +310,51 @@ canvas {
   margin-bottom: 0.25rem;
 }
 
-.log-action {
-  color: #9ca3af;
-  margin-bottom: 0.125rem;
+.log-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
 }
 
-.log-event {
+.action-move {
+  color: #60a5fa;
+}
+
+.action-wait {
+  color: #9ca3af;
+}
+
+.udon-gained {
   color: #fbbf24;
+  font-weight: bold;
+}
+
+.log-events {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.event-udon {
+  color: #fbbf24;
+  font-size: 0.8rem;
+}
+
+.event-fuel_warning {
+  color: #ef4444;
+  font-size: 0.8rem;
+}
+
+.event-refuel {
+  color: #22c55e;
+  font-size: 0.8rem;
+}
+
+.event-spot_empty {
+  color: #9ca3af;
+  font-size: 0.8rem;
 }
 
 .range-group {
